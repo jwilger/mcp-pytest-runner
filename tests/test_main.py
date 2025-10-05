@@ -243,3 +243,57 @@ def test_server_advertises_tools_capability(
     assert capabilities.tools is not None, (
         "capabilities.tools must be set to advertise tools to MCP clients"
     )
+
+
+@patch("pytest_mcp.main.domain.list_tools")
+def test_list_tools_handler_exists_and_returns_tool_definitions(
+    mock_domain_list_tools: MagicMock,
+) -> None:
+    """Verify MCP server has @server.list_tools() handler that returns tool definitions.
+
+    CRITICAL BUG FIX TEST: Server advertises tools capability but has NO list_tools handler.
+    This means MCP clients (like Claude Code) can see the server has tools but cannot
+    discover what tools are available via the tools/list protocol request.
+
+    The handler must:
+    1. Be decorated with @server.list_tools()
+    2. Call domain.list_tools() to get tool definitions
+    3. Return list[Tool] (MCP SDK expects list[types.Tool])
+
+    Per MCP protocol, when client sends tools/list request, server must respond with
+    list of Tool objects containing name, description, and inputSchema for each tool.
+
+    This test mocks the domain function and verifies the MCP handler exists and is callable.
+    """
+    import asyncio
+
+    from pytest_mcp.domain import Tool
+    from pytest_mcp.main import list_available_tools
+
+    # Mock domain.list_tools() to return tool definitions
+    mock_tools = [
+        Tool(
+            name="execute_tests",
+            description="Execute pytest tests",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        Tool(
+            name="discover_tests",
+            description="Discover pytest tests",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+    ]
+    mock_domain_list_tools.return_value = mock_tools
+
+    # Call the MCP handler
+    result = asyncio.run(list_available_tools())
+
+    # Verify domain function was called
+    assert mock_domain_list_tools.called, (
+        "list_available_tools handler must call domain.list_tools()"
+    )
+
+    # Verify result is list of Tool objects
+    assert isinstance(result, list), "Handler must return list"
+    assert len(result) == 2, "Handler must return both tools"
+    assert all(isinstance(tool, Tool) for tool in result), "Handler must return list[Tool]"

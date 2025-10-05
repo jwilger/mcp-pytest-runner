@@ -19,6 +19,13 @@ from pytest_mcp.domain import DiscoverTestsParams, ExecuteTestsParams
 server = Server("pytest-mcp")
 
 
+@server.list_tools()  # type: ignore[misc, no-untyped-call]
+async def list_available_tools() -> list[domain.Tool]:
+    """List available MCP tools following ADR-010 pattern."""
+    tools = domain.list_tools()
+    return tools
+
+
 def cli_main() -> None:
     """Console script entry point for pytest-mcp server."""
     asyncio.run(main())
