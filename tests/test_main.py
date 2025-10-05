@@ -203,16 +203,13 @@ def test_server_advertises_tools_capability(
     mock_server_run: AsyncMock,
     mock_stdio_server: MagicMock,
 ) -> None:
-    """Verify MCP server advertises tools capability to clients.
+    """Verify that the MCP server advertises the tools capability to clients.
 
-    Bug: Server has registered tools (execute_tests, discover_tests) via @server.call_tool()
-    decorators, but doesn't advertise tools capability in InitializationOptions.
+    This test ensures that when the server is started, it sets the tools capability
+    in the InitializationOptions, allowing MCP clients to discover available tools.
 
-    This causes MCP clients like Claude Code to not see the available tools even though
-    they are registered and functional.
-
-    The test verifies that capabilities.tools is set (not None) when passed to
-    InitializationOptions during server.run() call.
+    The test asserts that capabilities.tools is set (not None) when passed to
+    InitializationOptions during the server.run() call.
     """
     import asyncio
 
