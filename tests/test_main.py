@@ -245,6 +245,49 @@ def test_server_advertises_tools_capability(
     )
 
 
+@patch("pytest_mcp.main.stdio_server")
+@patch("pytest_mcp.main.server.run", new_callable=AsyncMock)
+def test_initialization_uses_server_get_capabilities(
+    mock_server_run: AsyncMock,
+    mock_stdio_server: MagicMock,
+) -> None:
+    """Verify InitializationOptions uses server.get_capabilities() for proper tool discovery.
+
+    CRITICAL BUG TEST: Manually constructing ServerCapabilities leaves tools.listChanged=None,
+    which causes MCP clients to report hasTools=false. The SDK's server.get_capabilities()
+    automatically sets tools.listChanged=False when tools are registered.
+
+    This test verifies that:
+    1. InitializationOptions.capabilities comes from server.get_capabilities()
+    2. capabilities.tools.listChanged is set to False (not None)
+    3. MCP clients can properly detect available tools
+    """
+    import asyncio
+
+    # Mock stdio_server context manager
+    mock_read_stream = MagicMock()
+    mock_write_stream = MagicMock()
+    mock_stdio_server.return_value.__aenter__.return_value = (
+        mock_read_stream,
+        mock_write_stream,
+    )
+
+    # Call main()
+    asyncio.run(main())
+
+    # Extract InitializationOptions (third argument to server.run)
+    init_options = mock_server_run.call_args[0][2]
+    capabilities = init_options.capabilities
+
+    # CRITICAL ASSERTION: Verify tools.listChanged is False (not None)
+    # This proves server.get_capabilities() was used instead of manual construction
+    assert capabilities.tools.listChanged is False, (
+        "capabilities.tools.listChanged must be False (set by server.get_capabilities()) "
+        "to enable proper MCP client tool discovery. Currently None indicates manual "
+        "ServerCapabilities construction was used instead of server.get_capabilities()"
+    )
+
+
 @patch("pytest_mcp.main.domain.list_tools")
 def test_list_tools_handler_exists_and_returns_tool_definitions(
     mock_domain_list_tools: MagicMock,
