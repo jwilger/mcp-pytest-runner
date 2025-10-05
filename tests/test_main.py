@@ -7,6 +7,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pytest_mcp.main import main
 
 
+def find_pyproject_toml(start_path: Path) -> Path:
+    """Walk up parent directories to find pyproject.toml."""
+    current = start_path.resolve()
+    while True:
+        candidate = current / "pyproject.toml"
+        if candidate.is_file():
+            return candidate
+        if current.parent == current:
+            raise FileNotFoundError("pyproject.toml not found in any parent directory")
+        current = current.parent
+
+
 def test_cli_main_function_exists() -> None:
     """Verify cli_main() entry point exists per ADR-012."""
     from pytest_mcp.main import cli_main
@@ -26,7 +38,7 @@ def test_cli_main_calls_asyncio_run_with_main(mock_asyncio_run: MagicMock) -> No
 
 def test_console_script_entry_point_configured() -> None:
     """Verify pyproject.toml defines pytest-mcp console script per ADR-012."""
-    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    pyproject_path = find_pyproject_toml(Path(__file__).parent)
     with open(pyproject_path, "rb") as f:
         config = tomllib.load(f)
 
