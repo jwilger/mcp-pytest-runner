@@ -7,9 +7,10 @@ Domain types and workflow functions are defined in the domain module.
 import asyncio
 from typing import Any
 
-from mcp.server import NotificationOptions, Server
+from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
+from mcp.types import ServerCapabilities, ToolsCapability
 
 from pytest_mcp import domain  # noqa: F401 - imported for type availability
 from pytest_mcp.domain import DiscoverTestsParams, ExecuteTestsParams
@@ -32,9 +33,9 @@ async def main() -> None:
             InitializationOptions(
                 server_name="pytest-mcp",
                 server_version="0.1.0",
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(),
+                    experimental={},
                 ),
             ),
         )

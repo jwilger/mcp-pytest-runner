@@ -183,3 +183,54 @@ def test_tool_handler_raises_validation_error_for_invalid_arguments() -> None:
     # Should raise ValidationError
     with pytest.raises(ValidationError):
         asyncio.run(execute_tests(invalid_args))
+
+
+@patch("pytest_mcp.main.stdio_server")
+@patch("pytest_mcp.main.server.run", new_callable=AsyncMock)
+def test_server_advertises_tools_capability(
+    mock_server_run: AsyncMock,
+    mock_stdio_server: MagicMock,
+) -> None:
+    """Verify MCP server advertises tools capability to clients.
+
+    Bug: Server has registered tools (execute_tests, discover_tests) via @server.call_tool()
+    decorators, but doesn't advertise tools capability in InitializationOptions.
+
+    This causes MCP clients like Claude Code to not see the available tools even though
+    they are registered and functional.
+
+    The test verifies that capabilities.tools is set (not None) when passed to
+    InitializationOptions during server.run() call.
+    """
+    import asyncio
+
+    from mcp.types import ServerCapabilities
+
+    # Mock stdio_server context manager
+    mock_read_stream = MagicMock()
+    mock_write_stream = MagicMock()
+    mock_stdio_server.return_value.__aenter__.return_value = (
+        mock_read_stream,
+        mock_write_stream,
+    )
+
+    # Call main()
+    asyncio.run(main())
+
+    # Verify server.run was called
+    mock_server_run.assert_called_once()
+
+    # Extract InitializationOptions (third argument to server.run)
+    init_options = mock_server_run.call_args[0][2]
+    assert init_options is not None, "InitializationOptions should be passed to server.run()"
+
+    # Extract capabilities from InitializationOptions
+    capabilities = init_options.capabilities
+    assert isinstance(capabilities, ServerCapabilities), (
+        "capabilities should be ServerCapabilities instance"
+    )
+
+    # CRITICAL ASSERTION: Verify tools capability is advertised
+    assert capabilities.tools is not None, (
+        "capabilities.tools must be set to advertise tools to MCP clients"
+    )
