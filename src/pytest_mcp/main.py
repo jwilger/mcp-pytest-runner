@@ -11,6 +11,7 @@ from mcp.server import Server
 from mcp.server.lowlevel import NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
+from mcp.types import Tool as McpTool
 
 from pytest_mcp import domain  # noqa: F401 - imported for type availability
 from pytest_mcp.domain import DiscoverTestsParams, ExecuteTestsParams
@@ -19,11 +20,29 @@ from pytest_mcp.domain import DiscoverTestsParams, ExecuteTestsParams
 server = Server("pytest-mcp")
 
 
+def to_mcp_tool(domain_tool: domain.Tool) -> McpTool:
+    """Convert domain.Tool to mcp.types.Tool per ADR-013 adapter pattern.
+
+    Driven port adapter: Converts domain types to MCP SDK types for protocol compliance.
+
+    Args:
+        domain_tool: Domain tool definition
+
+    Returns:
+        MCP SDK Tool instance
+    """
+    return McpTool(
+        name=domain_tool.name,
+        description=domain_tool.description,
+        inputSchema=domain_tool.inputSchema,
+    )
+
+
 @server.list_tools()  # type: ignore[misc, no-untyped-call]
-async def list_available_tools() -> list[domain.Tool]:
+async def list_available_tools() -> list[McpTool]:
     """List available MCP tools following ADR-010 pattern."""
-    tools = domain.list_tools()
-    return tools
+    domain_tools = domain.list_tools()
+    return [to_mcp_tool(tool) for tool in domain_tools]
 
 
 def cli_main() -> None:

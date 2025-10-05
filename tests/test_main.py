@@ -292,35 +292,34 @@ def test_initialization_uses_server_get_capabilities(
 def test_list_tools_handler_exists_and_returns_tool_definitions(
     mock_domain_list_tools: MagicMock,
 ) -> None:
-    """Verify MCP server has @server.list_tools() handler that returns tool definitions.
+    """Verify MCP server has @server.list_tools() handler that returns MCP tool definitions.
 
-    CRITICAL BUG FIX TEST: Server advertises tools capability but has NO list_tools handler.
-    This means MCP clients (like Claude Code) can see the server has tools but cannot
-    discover what tools are available via the tools/list protocol request.
+    Per ADR-013, the handler uses driven port adapter to convert domain.Tool → mcp.types.Tool.
 
     The handler must:
     1. Be decorated with @server.list_tools()
-    2. Call domain.list_tools() to get tool definitions
-    3. Return list[Tool] (MCP SDK expects list[types.Tool])
+    2. Call domain.list_tools() to get domain tool definitions
+    3. Use adapter to convert domain.Tool → mcp.types.Tool
+    4. Return list[mcp.types.Tool] for MCP SDK
 
     Per MCP protocol, when client sends tools/list request, server must respond with
-    list of Tool objects containing name, description, and inputSchema for each tool.
-
-    This test mocks the domain function and verifies the MCP handler exists and is callable.
+    list of mcp.types.Tool objects containing name, description, and inputSchema.
     """
     import asyncio
 
-    from pytest_mcp.domain import Tool
+    from mcp.types import Tool as McpTool
+
+    from pytest_mcp.domain import Tool as DomainTool
     from pytest_mcp.main import list_available_tools
 
-    # Mock domain.list_tools() to return tool definitions
+    # Mock domain.list_tools() to return domain tool definitions
     mock_tools = [
-        Tool(
+        DomainTool(
             name="execute_tests",
             description="Execute pytest tests",
             inputSchema={"type": "object", "properties": {}},
         ),
-        Tool(
+        DomainTool(
             name="discover_tests",
             description="Discover pytest tests",
             inputSchema={"type": "object", "properties": {}},
@@ -336,7 +335,70 @@ def test_list_tools_handler_exists_and_returns_tool_definitions(
         "list_available_tools handler must call domain.list_tools()"
     )
 
-    # Verify result is list of Tool objects
+    # Verify result is list of mcp.types.Tool (after adapter conversion)
     assert isinstance(result, list), "Handler must return list"
     assert len(result) == 2, "Handler must return both tools"
-    assert all(isinstance(tool, Tool) for tool in result), "Handler must return list[Tool]"
+    assert all(isinstance(tool, McpTool) for tool in result), (
+        "Handler must return list[mcp.types.Tool] per ADR-013 adapter pattern"
+    )
+
+
+@patch("pytest_mcp.main.domain.list_tools")
+def test_list_tools_uses_adapter_to_convert_domain_to_mcp_types(
+    mock_domain_list_tools: MagicMock,
+) -> None:
+    """Verify list_available_tools() uses adapter to convert domain.Tool → mcp.types.Tool.
+
+    Per ADR-013 (Hexagonal Adapter Layer), ALL MCP protocol interactions require explicit
+    adapters. This is a DRIVEN PORT adapter (outbound/secondary):
+    - Domain produces: list[domain.Tool]
+    - Adapter converts: domain.Tool → mcp.types.Tool
+    - MCP SDK expects: list[mcp.types.Tool]
+
+    The test verifies:
+    1. Domain layer returns domain.Tool objects
+    2. Adapter function exists to convert domain.Tool → mcp.types.Tool
+    3. MCP handler uses adapter to return mcp.types.Tool instances
+
+    This test will FAIL because:
+    - Current implementation directly returns domain.Tool objects
+    - No adapter function exists yet
+    - MCP SDK receives incompatible Pydantic BaseModel instead of mcp.types.Tool
+    """
+    import asyncio
+
+    from mcp.types import Tool as McpTool
+
+    from pytest_mcp.domain import Tool as DomainTool
+    from pytest_mcp.main import list_available_tools
+
+    # Mock domain.list_tools() to return domain.Tool objects
+    mock_tools = [
+        DomainTool(
+            name="execute_tests",
+            description="Execute pytest tests",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        DomainTool(
+            name="discover_tests",
+            description="Discover pytest tests",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+    ]
+    mock_domain_list_tools.return_value = mock_tools
+
+    # Call the MCP handler
+    result = asyncio.run(list_available_tools())
+
+    # CRITICAL ASSERTION: Verify adapter converted domain.Tool → mcp.types.Tool
+    # Per ADR-013, driven port adapters must convert domain types to MCP protocol types
+    assert isinstance(result, list), "Handler must return list"
+    assert len(result) == 2, "Handler must return both tools"
+
+    # Verify each tool is mcp.types.Tool instance (not domain.Tool)
+    for i, tool in enumerate(result):
+        assert isinstance(tool, McpTool), (
+            f"Tool {i} must be mcp.types.Tool instance per ADR-013 adapter pattern. "
+            f"Got {type(tool).__name__} instead. "
+            "Driven port adapters (to_mcp_*) must convert domain types to MCP SDK types."
+        )
