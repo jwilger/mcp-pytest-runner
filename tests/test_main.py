@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from pytest_mcp.main import main
+from mcp_pytest_runner.main import main
 
 
 def find_pyproject_toml(start_path: Path) -> Path:
@@ -22,15 +22,15 @@ def find_pyproject_toml(start_path: Path) -> Path:
 
 def test_cli_main_function_exists() -> None:
     """Verify cli_main() entry point exists per ADR-012."""
-    from pytest_mcp.main import cli_main
+    from mcp_pytest_runner.main import cli_main
 
     assert callable(cli_main)
 
 
-@patch("pytest_mcp.main.asyncio.run")
+@patch("mcp_pytest_runner.main.asyncio.run")
 def test_cli_main_calls_asyncio_run_with_main(mock_asyncio_run: MagicMock) -> None:
     """Verify cli_main() calls asyncio.run(main()) per ADR-012."""
-    from pytest_mcp.main import cli_main
+    from mcp_pytest_runner.main import cli_main
 
     cli_main()
 
@@ -44,20 +44,20 @@ def test_console_script_entry_point_configured() -> None:
         config = tomllib.load(f)
 
     scripts = config.get("project", {}).get("scripts", {})
-    assert "pytest-mcp" in scripts
+    assert "mcp-pytest-runner" in scripts
 
 
 def test_server_instance_exists() -> None:
     """Verify Server instance exists at module scope per ADR-011."""
     from mcp.server import Server
 
-    from pytest_mcp.main import server
+    from mcp_pytest_runner.main import server
 
     assert isinstance(server, Server)
 
 
-@patch("pytest_mcp.main.stdio_server")
-@patch("pytest_mcp.main.server.run", new_callable=AsyncMock)
+@patch("mcp_pytest_runner.main.stdio_server")
+@patch("mcp_pytest_runner.main.server.run", new_callable=AsyncMock)
 def test_main_uses_stdio_server_lifecycle(
     mock_server_run: AsyncMock,
     mock_stdio_server: MagicMock,
@@ -88,7 +88,7 @@ def test_main_uses_stdio_server_lifecycle(
     assert call_args[2] is not None
 
 
-@patch("pytest_mcp.main.domain.execute_tests")
+@patch("mcp_pytest_runner.main.domain.execute_tests")
 def test_execute_tests_tool_handler_exists(
     mock_domain_execute: MagicMock,
 ) -> None:
@@ -102,8 +102,8 @@ def test_execute_tests_tool_handler_exists(
     """
     import asyncio
 
-    from pytest_mcp.domain import ExecuteTestsParams, ExecuteTestsResponse, ExecutionSummary
-    from pytest_mcp.main import execute_tests
+    from mcp_pytest_runner.domain import ExecuteTestsParams, ExecuteTestsResponse, ExecutionSummary
+    from mcp_pytest_runner.main import execute_tests
 
     # Mock domain function to return test response
     mock_response = ExecuteTestsResponse(
@@ -127,7 +127,7 @@ def test_execute_tests_tool_handler_exists(
     assert isinstance(result, dict)
 
 
-@patch("pytest_mcp.main.domain.discover_tests")
+@patch("mcp_pytest_runner.main.domain.discover_tests")
 def test_discover_tests_tool_handler_exists(
     mock_domain_discover: MagicMock,
 ) -> None:
@@ -141,12 +141,12 @@ def test_discover_tests_tool_handler_exists(
     """
     import asyncio
 
-    from pytest_mcp.domain import (
+    from mcp_pytest_runner.domain import (
         DiscoveredTest,
         DiscoverTestsParams,
         DiscoverTestsResponse,
     )
-    from pytest_mcp.main import discover_tests
+    from mcp_pytest_runner.main import discover_tests
 
     # Mock domain function to return test response
     mock_response = DiscoverTestsResponse(
@@ -188,7 +188,7 @@ def test_tool_handler_raises_validation_error_for_invalid_arguments() -> None:
     import pytest
     from pydantic import ValidationError
 
-    from pytest_mcp.main import execute_tests
+    from mcp_pytest_runner.main import execute_tests
 
     # Invalid arguments - execute_tests doesn't accept 'invalid_field'
     invalid_args = {"invalid_field": "bad_value"}
@@ -198,8 +198,8 @@ def test_tool_handler_raises_validation_error_for_invalid_arguments() -> None:
         asyncio.run(execute_tests(name="execute_tests", arguments=invalid_args))
 
 
-@patch("pytest_mcp.main.stdio_server")
-@patch("pytest_mcp.main.server.run", new_callable=AsyncMock)
+@patch("mcp_pytest_runner.main.stdio_server")
+@patch("mcp_pytest_runner.main.server.run", new_callable=AsyncMock)
 def test_server_advertises_tools_capability(
     mock_server_run: AsyncMock,
     mock_stdio_server: MagicMock,
@@ -246,8 +246,8 @@ def test_server_advertises_tools_capability(
     )
 
 
-@patch("pytest_mcp.main.stdio_server")
-@patch("pytest_mcp.main.server.run", new_callable=AsyncMock)
+@patch("mcp_pytest_runner.main.stdio_server")
+@patch("mcp_pytest_runner.main.server.run", new_callable=AsyncMock)
 def test_initialization_uses_server_get_capabilities(
     mock_server_run: AsyncMock,
     mock_stdio_server: MagicMock,
@@ -289,7 +289,7 @@ def test_initialization_uses_server_get_capabilities(
     )
 
 
-@patch("pytest_mcp.main.domain.list_tools")
+@patch("mcp_pytest_runner.main.domain.list_tools")
 def test_list_tools_handler_exists_and_returns_tool_definitions(
     mock_domain_list_tools: MagicMock,
 ) -> None:
@@ -310,8 +310,8 @@ def test_list_tools_handler_exists_and_returns_tool_definitions(
 
     from mcp.types import Tool as McpTool
 
-    from pytest_mcp.domain import Tool as DomainTool
-    from pytest_mcp.main import list_available_tools
+    from mcp_pytest_runner.domain import Tool as DomainTool
+    from mcp_pytest_runner.main import list_available_tools
 
     # Mock domain.list_tools() to return domain tool definitions
     mock_tools = [
@@ -344,7 +344,7 @@ def test_list_tools_handler_exists_and_returns_tool_definitions(
     )
 
 
-@patch("pytest_mcp.main.domain.list_tools")
+@patch("mcp_pytest_runner.main.domain.list_tools")
 def test_list_tools_uses_adapter_to_convert_domain_to_mcp_types(
     mock_domain_list_tools: MagicMock,
 ) -> None:
@@ -370,8 +370,8 @@ def test_list_tools_uses_adapter_to_convert_domain_to_mcp_types(
 
     from mcp.types import Tool as McpTool
 
-    from pytest_mcp.domain import Tool as DomainTool
-    from pytest_mcp.main import list_available_tools
+    from mcp_pytest_runner.domain import Tool as DomainTool
+    from mcp_pytest_runner.main import list_available_tools
 
     # Mock domain.list_tools() to return domain.Tool objects
     mock_tools = [
@@ -405,7 +405,7 @@ def test_list_tools_uses_adapter_to_convert_domain_to_mcp_types(
         )
 
 
-@patch("pytest_mcp.main.domain.execute_tests")
+@patch("mcp_pytest_runner.main.domain.execute_tests")
 def test_execute_tests_handler_accepts_name_and_arguments_parameters(
     mock_domain_execute: MagicMock,
 ) -> None:
@@ -420,8 +420,8 @@ def test_execute_tests_handler_accepts_name_and_arguments_parameters(
     """
     import asyncio
 
-    from pytest_mcp.domain import ExecuteTestsResponse, ExecutionSummary
-    from pytest_mcp.main import execute_tests
+    from mcp_pytest_runner.domain import ExecuteTestsResponse, ExecutionSummary
+    from mcp_pytest_runner.main import execute_tests
 
     # Mock domain function to return test response
     mock_response = ExecuteTestsResponse(
@@ -440,7 +440,7 @@ def test_execute_tests_handler_accepts_name_and_arguments_parameters(
     assert isinstance(result, dict)
 
 
-@patch("pytest_mcp.main.domain.discover_tests")
+@patch("mcp_pytest_runner.main.domain.discover_tests")
 def test_discover_tests_handler_accepts_name_and_arguments_parameters(
     mock_domain_discover: MagicMock,
 ) -> None:
@@ -455,11 +455,11 @@ def test_discover_tests_handler_accepts_name_and_arguments_parameters(
     """
     import asyncio
 
-    from pytest_mcp.domain import (
+    from mcp_pytest_runner.domain import (
         DiscoveredTest,
         DiscoverTestsResponse,
     )
-    from pytest_mcp.main import discover_tests
+    from mcp_pytest_runner.main import discover_tests
 
     # Mock domain function to return test response
     mock_response = DiscoverTestsResponse(
@@ -485,8 +485,8 @@ def test_discover_tests_handler_accepts_name_and_arguments_parameters(
     assert isinstance(result, dict)
 
 
-@patch("pytest_mcp.main.domain.execute_tests")
-@patch("pytest_mcp.main.domain.discover_tests")
+@patch("mcp_pytest_runner.main.domain.execute_tests")
+@patch("mcp_pytest_runner.main.domain.discover_tests")
 def test_single_tool_handler_routes_to_correct_domain_function(
     mock_domain_discover: MagicMock,
     mock_domain_execute: MagicMock,
@@ -507,13 +507,13 @@ def test_single_tool_handler_routes_to_correct_domain_function(
     """
     import asyncio
 
-    from pytest_mcp.domain import (
+    from mcp_pytest_runner.domain import (
         DiscoveredTest,
         DiscoverTestsResponse,
         ExecuteTestsResponse,
         ExecutionSummary,
     )
-    from pytest_mcp.main import handle_tool_call
+    from mcp_pytest_runner.main import handle_tool_call
 
     # Mock execute_tests domain response
     mock_execute_response = ExecuteTestsResponse(

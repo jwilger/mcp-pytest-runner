@@ -1,10 +1,10 @@
-# pytest-mcp
+# mcp-pytest-runner
 
 MCP server providing opinionated pytest execution interface for AI agents.
 
 ## Overview
 
-pytest-mcp is a Model Context Protocol (MCP) server that enables AI coding assistants to execute pytest with intelligent test selection, structured result interpretation, and context-aware recommendations.
+mcp-pytest-runner is a Model Context Protocol (MCP) server that enables AI coding assistants to execute pytest with intelligent test selection, structured result interpretation, and context-aware recommendations.
 
 ## Status
 
@@ -15,41 +15,47 @@ This project is in active development. MCP server implementation complete with s
 Install via uvx for immediate use:
 
 ```bash
-uvx --from pytest-mcp pytest-mcp
+uvx mcp-pytest-runner
 ```
 
 Or add to your Python environment:
 
 ```bash
-pip install pytest-mcp
+pip install mcp-pytest-runner
 ```
 
 ## MCP Integration
 
-pytest-mcp provides a Model Context Protocol server that enables AI coding assistants to execute pytest with intelligent test selection and structured result interpretation.
+mcp-pytest-runner provides a Model Context Protocol server that enables AI coding assistants to execute pytest with intelligent test selection and structured result interpretation.
 
 ### Claude Code Configuration
 
-Add pytest-mcp to your Claude Code MCP settings. The configuration file location depends on your platform:
+Add mcp-pytest-runner to your Claude Code MCP settings using the `claude mcp add` command:
+
+```bash
+claude mcp add pytest uvx mcp-pytest-runner
+```
+
+Or manually configure by editing your MCP settings. The configuration file location depends on your platform:
 
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-Example configuration:
+Example manual configuration:
 
 ```json
 {
   "mcpServers": {
-    "pytest-mcp": {
+    "pytest": {
       "command": "uvx",
-      "args": ["--from", "pytest-mcp", "pytest-mcp"]
+      "args": ["mcp-pytest-runner"]
     }
   }
 }
 ```
 
-**Why uvx?** Ensures you always use the latest version without manual updates. Alternative: use `pytest-mcp` directly if installed in your system Python.
+**Why uvx?** Ensures you always use the latest version without manual updates. Alternative: use `mcp-pytest-runner` directly if installed in your system Python.
 
 ### Available Tools
 
@@ -92,7 +98,7 @@ Execute pytest tests with validated parameters.
 Verify the MCP server is working correctly:
 
 1. **Restart Claude Code** after updating configuration
-2. **Check MCP connection**: Look for pytest-mcp in Claude's available tools
+2. **Check MCP connection**: Look for pytest tools in Claude's available tools
 3. **Test discovery**: Ask Claude to "discover tests in this project"
 4. **Test execution**: Ask Claude to "run all tests"
 

@@ -15,8 +15,8 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool as McpTool
 
-from pytest_mcp import domain  # noqa: F401 - imported for type availability
-from pytest_mcp.domain import DiscoverTestsParams, ExecuteTestsParams
+from mcp_pytest_runner import domain  # noqa: F401 - imported for type availability
+from mcp_pytest_runner.domain import DiscoverTestsParams, ExecuteTestsParams
 
 # Module scope: Server instance per ADR-011
 server = Server("pytest-mcp")
@@ -60,7 +60,7 @@ async def main() -> None:
             write_stream,
             InitializationOptions(
                 server_name="pytest-mcp",
-                server_version="0.1.0",
+                server_version="0.2.1",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},

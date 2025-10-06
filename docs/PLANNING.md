@@ -505,17 +505,17 @@ pytest-mcp is packaged for distribution on PyPI following Python packaging stand
 #### Acceptance Criteria
 
 ```gherkin
-Scenario: Developer installs pytest-mcp from PyPI
-  Given pytest-mcp is published to PyPI
-  When developer runs "pip install pytest-mcp"
+Scenario: Developer installs mcp-pytest-runner from PyPI
+  Given mcp-pytest-runner is published to PyPI
+  When developer runs "pip install mcp-pytest-runner"
   Then package installs successfully
   And package metadata shows correct name, version, author, license
   And dependencies are installed automatically
 
 Scenario: Package metadata follows standards
-  Given pytest-mcp package configuration
+  Given mcp-pytest-runner package configuration
   When examining package metadata
-  Then package name is "pytest-mcp"
+  Then package name is "mcp-pytest-runner"
   And package follows semantic versioning
   And license is MIT
   And Python version requirement is 3.12+
@@ -565,23 +565,23 @@ Users execute pytest-mcp via uvx without persistent installation. The MCP server
 
 ```gherkin
 Scenario: Developer runs pytest-mcp via uvx
-  Given pytest-mcp published to PyPI
-  When developer runs "uvx pytest-mcp"
+  Given mcp-pytest-runner published to PyPI
+  When developer runs "uvx --from mcp-pytest-runner pytest-mcp"
   Then pytest-mcp launches successfully
   And MCP server initializes and responds to requests
   And server operates identically to pip-installed version
   And server terminates cleanly when session ends
 
 Scenario: uvx resolves dependencies automatically
-  Given pytest-mcp package with dependencies
-  When developer runs "uvx pytest-mcp"
+  Given mcp-pytest-runner package with dependencies
+  When developer runs "uvx --from mcp-pytest-runner pytest-mcp"
   Then uvx creates isolated environment
   And all dependencies are installed automatically
   And server has access to all required libraries
 
 Scenario: uvx execution uses latest PyPI version
-  Given pytest-mcp version 0.2.0 published to PyPI
-  When developer runs "uvx pytest-mcp" with no version pin
+  Given mcp-pytest-runner version 0.2.0 published to PyPI
+  When developer runs "uvx --from mcp-pytest-runner pytest-mcp" with no version pin
   Then uvx downloads and executes version 0.2.0
   And server metadata reports version 0.2.0
 ```
@@ -731,7 +731,7 @@ CI workflow should run on every push and pull request. Quality gates must be str
 
 #### Description
 
-GitHub Actions workflow automatically publishes new pytest-mcp versions to PyPI when maintainer creates Git tag. The workflow builds distributions, validates package, authenticates with PyPI, and uploads release, eliminating manual publishing steps.
+GitHub Actions workflow automatically publishes new mcp-pytest-runner versions to PyPI when maintainer creates Git tag. The workflow builds distributions, validates package, authenticates with PyPI, and uploads release, eliminating manual publishing steps.
 
 **WHY**: Automated releases eliminate manual publishing errors and accelerate release cycles. Developers create Git tag, automation handles everything else, ensuring consistent and reliable publishing process.
 
@@ -745,7 +745,7 @@ Scenario: Maintainer triggers release via Git tag
   And workflow builds wheel and source distributions
   And workflow validates package metadata
   And workflow publishes to PyPI successfully
-  And pytest-mcp version 0.1.0 appears on PyPI
+  And mcp-pytest-runner version 0.1.0 appears on PyPI
 
 Scenario: Release workflow validates semantic versioning
   Given Git tag "v0.1.0"

@@ -4,7 +4,7 @@ Outside-In TDD: Start with highest-level acceptance test for tool listing.
 Test the workflow function directly before drilling down to components.
 """
 
-from pytest_mcp.domain import list_tools
+from mcp_pytest_runner.domain import list_tools
 
 
 def test_list_tools_returns_array_with_two_tool_definitions() -> None:

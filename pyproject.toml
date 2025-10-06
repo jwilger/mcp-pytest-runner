@@ -1,6 +1,6 @@
 [project]
-name = "pytest-mcp"
-version = "0.1.0"
+name = "mcp-pytest-runner"
+version = "0.2.1"
 description = "MCP server providing opinionated pytest execution interface for AI agents"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -31,11 +31,14 @@ dev = [
 ]
 
 [project.scripts]
-pytest-mcp = "pytest_mcp.main:cli_main"
+mcp-pytest-runner = "mcp_pytest_runner.main:cli_main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_pytest_runner"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

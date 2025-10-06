@@ -6,7 +6,7 @@ Test the workflow function directly before drilling down to components.
 
 import pytest
 
-from pytest_mcp.domain import (
+from mcp_pytest_runner.domain import (
     ProtocolValidationError,
     initialize_server,
 )
