@@ -203,3 +203,106 @@ def test_discover_tests_path_parameter_includes_security_validation() -> None:
     assert path_schema and "title" in path_schema, (
         "Path parameter must be defined in schema with proper structure"
     )
+
+
+def test_execute_tests_node_ids_parameter_uses_simple_array_type() -> None:
+    """Verify node_ids parameter uses simple array type, not anyOf union.
+
+    MCP Protocol Compatibility:
+      The MCP protocol expects simple array types with default: []
+      Using anyOf union types (e.g., anyOf: [{type: array}, {type: null}])
+      causes compatibility issues with some MCP clients.
+
+    Expected Schema Pattern (matching official MCP servers):
+      node_ids:
+        type: "array"
+        items: {type: "string"}
+        default: []
+
+    Single assertion: node_ids parameter must use simple array type.
+    """
+    # Arrange: Get execute_tests tool
+    tools = list_tools()
+    execute_tests_tool = next(t for t in tools if t.name == "execute_tests")
+
+    # Act: Extract node_ids parameter schema
+    schema_properties = execute_tests_tool.inputSchema.get("properties", {})
+    node_ids_schema = schema_properties.get("node_ids", {})
+
+    # Assert: node_ids uses simple array type (not anyOf union)
+    assert node_ids_schema.get("type") == "array" and "anyOf" not in node_ids_schema, (
+        "node_ids parameter must use simple 'type: array' (not anyOf union) "
+        "for MCP protocol compatibility"
+    )
+
+
+def test_execute_tests_parameter_descriptions_include_type_info_and_examples() -> None:
+    """Verify execute_tests parameter descriptions include type information and examples.
+
+    User Experience Requirement:
+      AI agents need clear parameter descriptions that include:
+      - The parameter type (array, string, integer, boolean)
+      - Example values showing proper usage
+      - Clear guidance on how to use the parameter
+
+    This improves the AI agent's ability to construct valid tool calls
+    without trial-and-error or external documentation lookup.
+
+    Expected Description Pattern:
+      node_ids: "Array of strings. Specific test node IDs to execute.
+                 Example: ['tests/test_user.py::test_login', 'tests/test_auth.py']"
+      verbosity: "Integer from -2 to 2. Output verbosity level.
+                  -2 (quietest) to 2 (most verbose). Example: 1"
+      failfast: "Boolean. Stop execution on first failure. Example: true"
+
+    Single assertion: At least 3 parameters must have type info in descriptions.
+    """
+    # Arrange: Get execute_tests tool
+    tools = list_tools()
+    execute_tests_tool = next(t for t in tools if t.name == "execute_tests")
+
+    # Act: Extract parameter descriptions
+    schema_properties = execute_tests_tool.inputSchema.get("properties", {})
+
+    # Check node_ids description includes type and example
+    node_ids_desc = schema_properties.get("node_ids", {}).get("description", "")
+    node_ids_has_type_info = (
+        "array" in node_ids_desc.lower()
+        and "example" in node_ids_desc.lower()
+        and "test_" in node_ids_desc  # Shows example test path
+    )
+
+    # Check verbosity description includes type and example
+    verbosity_desc = schema_properties.get("verbosity", {}).get("description", "")
+    verbosity_has_type_info = (
+        "integer" in verbosity_desc.lower()
+        and (
+            "example" in verbosity_desc.lower()
+            or any(str(i) in verbosity_desc for i in [-2, -1, 0, 1, 2])
+        )
+        and ("-2" in verbosity_desc or "2" in verbosity_desc)  # Shows range
+    )
+
+    # Check failfast description includes type and example
+    failfast_desc = schema_properties.get("failfast", {}).get("description", "")
+    failfast_has_type_info = (
+        "boolean" in failfast_desc.lower() and "example" in failfast_desc.lower()
+    )
+
+    # Assert: At least 3 parameters have improved descriptions
+    params_with_type_info = sum(
+        [
+            node_ids_has_type_info,
+            verbosity_has_type_info,
+            failfast_has_type_info,
+        ]
+    )
+
+    assert params_with_type_info >= 3, (
+        f"At least 3 execute_tests parameters must have descriptions "
+        f"with type information and examples. "
+        f"Found {params_with_type_info} parameters with complete descriptions. "
+        f"\nnode_ids description: {node_ids_desc!r} (has type info: {node_ids_has_type_info}) "
+        f"\nverbosity description: {verbosity_desc!r} (has type info: {verbosity_has_type_info}) "
+        f"\nfailfast description: {failfast_desc!r} (has type info: {failfast_has_type_info})"
+    )

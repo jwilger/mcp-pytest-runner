@@ -266,6 +266,48 @@ pytest-mcp provides an opinionated MCP (Model Context Protocol) server interface
   - When test execution requested via MCP tool
   - Then pytest runs with validated arguments in consistent manner
 
+### Epic 5: MCP Server Integration
+
+**Story 5.1: MCP Server Runtime Integration**
+- **Description**: WHAT: System implements MCP JSON-RPC protocol over stdio, enabling pytest-mcp to function as an actual MCP server that AI agents can connect to
+- **Value**: WHY: Bridges the gap between workflow functions (domain.py) and usable MCP server; enables users to actually use pytest-mcp by adding it to Claude Code or other MCP client configurations
+- **Acceptance Criteria**:
+  - Given pytest-mcp installed via pip or uvx
+  - When user launches pytest-mcp server process
+  - Then server listens on stdio for MCP JSON-RPC messages
+  - And server responds to MCP initialize request with protocol handshake
+  - And server advertises execute_tests and discover_tests tools
+  - When AI agent calls execute_tests tool via MCP protocol
+  - Then server routes request to domain.execute_tests() workflow function
+  - And returns structured response via MCP protocol
+  - When AI agent calls discover_tests tool via MCP protocol
+  - Then server routes request to domain.discover_tests() workflow function
+  - And returns structured response via MCP protocol
+
+**Story 5.2: Server Entry Point Configuration**
+- **Description**: WHAT: Package includes executable entry point that users can invoke as `pytest-mcp` command
+- **Value**: WHY: Enables users to add pytest-mcp to MCP client configurations (like Claude Code) by referencing the entry point command
+- **Acceptance Criteria**:
+  - Given pytest-mcp installed via pip
+  - When user runs `pytest-mcp` command
+  - Then MCP server process starts and listens on stdio
+  - Given pytest-mcp PyPI package
+  - When examining package metadata
+  - Then pyproject.toml includes [project.scripts] entry point
+  - And entry point maps pytest-mcp command to main() function
+
+**Story 5.3: MCP Client Configuration Compatibility**
+- **Description**: WHAT: Server configuration instructions enable users to add pytest-mcp to MCP clients like Claude Code
+- **Value**: WHY: Users can actually use pytest-mcp in their AI development workflows, not just as standalone workflow functions
+- **Acceptance Criteria**:
+  - Given pytest-mcp installed and configured
+  - When user adds pytest-mcp to Claude Code MCP server configuration
+  - Then Claude Code successfully connects to pytest-mcp server
+  - And pytest-mcp tools appear in Claude Code's available tools
+  - When Claude requests execute_tests via MCP protocol
+  - Then pytest executes and results return to Claude
+  - And Claude can interpret and act on structured test results
+
 ## Success Criteria
 
 **User Adoption Metrics**:

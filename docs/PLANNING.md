@@ -9,7 +9,7 @@
 
 This document presents prioritized user stories for pytest-mcp, an MCP server providing standardized pytest execution for AI agents. Stories are derived from the three vertical slices in EVENT_MODEL.md and prioritized by business value and technical dependencies.
 
-**Total Stories**: 11 stories across 5 epics
+**Total Stories**: 12 stories across 5 epics (Stories 0-11, with Story 11 consolidating Epic 5 sub-stories)
 **Estimated Delivery**: Infrastructure-first approach, then sequential feature implementation
 
 ## Story Priority Overview
@@ -24,6 +24,7 @@ This document presents prioritized user stories for pytest-mcp, an MCP server pr
 | P1 | Story 3 | Core Testing | Test discovery enables intelligent test selection |
 | P1 | Story 4 | Core Testing | Test execution delivers primary business value |
 | P1 | Story 5 | Core Testing | Error handling ensures reliability |
+| P1 | Story 11 | Foundation | MCP server runtime integration bridges workflow functions to usable MCP server |
 | P2 | Story 6 | Distribution | PyPI packaging enables user installation |
 | P2 | Story 7 | Distribution | uvx support provides zero-config execution |
 | P2 | Story 10 | Infrastructure | Automated releases eliminate manual publishing |
@@ -782,6 +783,125 @@ Release workflow should use PyPI trusted publishing (OIDC) when available for en
 
 ---
 
+### Story 11: MCP Server Runtime Integration
+
+**Epic**: Foundation
+**Priority**: P1
+**Status**: In Progress
+
+#### Description
+
+Users launch pytest-mcp as a functional MCP server that AI agents can connect to and use for pytest test execution. The server implements the complete MCP JSON-RPC protocol over stdio, bridges workflow functions (execute_tests, discover_tests) to the MCP transport layer, provides a pytest-mcp console command for invocation, and enables configuration in MCP clients like Claude Code.
+
+**WHY**: Stories 1-4 delivered complete workflow functions and domain types, but the server cannot be used because there is no MCP protocol transport layer. This story bridges the gap between tested workflow functions and a usable MCP server, enabling users to actually use pytest-mcp by adding it to their AI development workflows.
+
+#### Acceptance Criteria
+
+```gherkin
+Scenario: User launches pytest-mcp server from command line
+  Given pytest-mcp installed via pip or uv
+  When user runs "pytest-mcp" command
+  Then MCP server process starts successfully
+  And server listens on stdio for MCP JSON-RPC messages
+  And server remains running until stdin closes
+
+Scenario: MCP client initializes connection to pytest-mcp
+  Given pytest-mcp server running
+  When MCP client sends initialize request via JSON-RPC
+  Then server responds with protocol handshake
+  And server identifies as "pytest-mcp" with version number
+  And server advertises available tools and capabilities
+
+Scenario: MCP client discovers available tools
+  Given initialized MCP connection
+  When client sends tools/list request
+  Then server responds with execute_tests tool definition
+  And server responds with discover_tests tool definition
+  And each tool includes complete parameter schema
+  And schemas match domain type validation rules
+
+Scenario: AI agent executes tests via MCP protocol
+  Given pytest-mcp configured in Claude Code
+  When Claude calls execute_tests tool via MCP protocol
+  Then server routes request to domain.execute_tests() workflow function
+  And server validates parameters using ExecuteTestsParams Pydantic model
+  And server returns structured response via MCP protocol
+  And Claude receives test results in expected format
+
+Scenario: AI agent discovers tests via MCP protocol
+  Given pytest-mcp configured in Claude Code
+  When Claude calls discover_tests tool via MCP protocol
+  Then server routes request to domain.discover_tests() workflow function
+  And server validates parameters using DiscoverTestsParams Pydantic model
+  And server returns structured response via MCP protocol
+  And Claude receives test hierarchy in expected format
+
+Scenario: Server handles validation errors gracefully
+  Given initialized MCP connection
+  When client calls execute_tests with invalid parameters
+  Then server returns JSON-RPC error response
+  And error includes field-level validation details
+  And error provides actionable message for correction
+  And domain workflow function is never invoked with invalid data
+
+Scenario: User configures pytest-mcp in Claude Code
+  Given pytest-mcp installed and available in PATH
+  When user adds pytest-mcp to Claude Code MCP server configuration
+  Then Claude Code successfully connects to pytest-mcp server
+  And pytest-mcp tools appear in Claude Code's available tools
+  And Claude can execute tests through pytest-mcp
+  And Claude receives structured test results
+
+Scenario: Server shuts down cleanly when client disconnects
+  Given pytest-mcp server running with active client
+  When client closes stdin connection
+  Then server detects EOF on stdin
+  And server completes cleanup via stdio_server context manager
+  And server process terminates with exit code 0
+
+Scenario: User configuration documentation guides MCP client setup
+  Given pytest-mcp installed via pip or uvx
+  When user reads configuration documentation in README.md
+  Then documentation provides exact JSON configuration snippet for Claude Code
+  And documentation specifies configuration file location (~/.config/claude/mcp_settings.json)
+  And documentation explains PATH requirements for command discovery
+  And documentation covers both installation methods (pip vs uvx)
+  And user can copy-paste configuration without modification
+```
+
+#### References
+
+- **Requirements**: Epic 5 (Stories 5.1, 5.2, 5.3) from REQUIREMENTS_ANALYSIS.md
+  - Story 5.1: MCP Server Runtime Integration
+  - Story 5.2: Server Entry Point Configuration
+  - Story 5.3: MCP Client Configuration Compatibility
+- **Event Model**: Workflow 3 (Server Capability Discovery) from EVENT_MODEL.md, lines 192-262
+- **Architecture**: MCP Protocol Layer from ARCHITECTURE.md, lines 122-135; Deployment Considerations from ARCHITECTURE.md, lines 487-516
+- **Design**: Protocol Design Language from STYLE_GUIDE.md, lines 213-241; MCP initialization patterns from STYLE_GUIDE.md
+
+#### Notes
+
+**Architectural Decisions (ADR-009 through ADR-012)**:
+
+- **ADR-009 (accepted)**: Use MCP Python SDK directly for all protocol transport, accepting async server model with thin async adapters wrapping workflow functions
+- **ADR-010 (accepted)**: Decorator-based tool routing using `@server.call_tool()` pattern with one async adapter per MCP tool
+- **ADR-011 (proposed)**: Server lifecycle via `stdio_server()` async context manager with module-scope decorator registration
+- **ADR-012 (proposed)**: Console script entry point `pytest-mcp = pytest_mcp.main:cli_main` with synchronous wrapper bridging to async main()
+
+**Implementation Approach**:
+
+1. **MCP SDK Integration**: Use `mcp.server.Server` and `mcp.server.stdio.stdio_server` for protocol transport
+2. **Adapter Layer**: Thin async functions transforming between MCP dicts and domain Pydantic types
+3. **Tool Registration**: Decorator pattern (`@server.call_tool()`) for automatic tool routing by name
+4. **Server Lifecycle**: Async context manager pattern with clean resource management
+5. **Entry Point**: Console script `pytest-mcp` invoking `asyncio.run(main())` for sync → async bridge
+
+**Domain Purity Constraint**: domain.py workflow functions remain completely unchanged (established in Story 5). All MCP protocol concerns isolated in main.py adapter layer.
+
+**Key Pattern**: Three-step adapter (parse MCP args → invoke domain function → return MCP response) maintains clear separation between transport and domain logic.
+
+---
+
 ## Story Dependencies
 
 ```mermaid
@@ -797,6 +917,7 @@ graph TB
     S8[Story 8: Nix Environment]
     S9[Story 9: CI Pipeline]
     S10[Story 10: Automated Release]
+    S11[Story 11: MCP Server Runtime]
 
     S8 --> S0
     S0 --> S9
@@ -806,7 +927,8 @@ graph TB
     S2 --> S4
     S3 --> S5
     S4 --> S5
-    S5 --> S6
+    S5 --> S11
+    S11 --> S6
     S6 --> S7
     S6 --> S10
 
@@ -818,6 +940,7 @@ graph TB
     style S3 fill:#ffcc99
     style S4 fill:#ffcc99
     style S5 fill:#ffcc99
+    style S11 fill:#ffcc99
     style S6 fill:#99ccff
     style S7 fill:#99ccff
     style S10 fill:#99ccff
@@ -835,13 +958,14 @@ graph TB
 - **Story 1 → Story 2**: MCP initialization must succeed before tool discovery
 - **Story 2 → Stories 3, 4**: Tools must be discoverable before they can be implemented
 - **Stories 3, 4 → Story 5**: Core functionality must exist before comprehensive error handling
+- **Story 5 → Story 11**: MCP server runtime integration requires complete workflow functions with error handling
 
 **Distribution & Automation (P2)**:
-- **Story 5 → Story 6**: Robust error handling completes core functionality before packaging
+- **Story 11 → Story 6**: MCP server must be functional before packaging for distribution
 - **Story 6 → Story 7**: PyPI package must exist for uvx to reference
 - **Story 6 → Story 10**: Package configuration required before automated publishing
 
-**Critical Path**: Story 8 → Story 0 → Story 9 → Story 1 → Story 2 → Story 3 → Story 4 → Story 5 → Story 6 → Story 7 and Story 10
+**Critical Path**: Story 8 → Story 0 → Story 9 → Story 1 → Story 2 → Story 3 → Story 4 → Story 5 → Story 11 → Story 6 → Story 7 and Story 10
 
 ---
 
@@ -884,6 +1008,8 @@ graph TB
 
 **Story 5 (Error Handling)**: Completes core request-response workflow with production-quality reliability. Essential for user trust and AI agent self-correction.
 
+**Story 11 (MCP Server Runtime Integration)**: Bridges tested workflow functions (Stories 1-5) to usable MCP server. Implements MCP JSON-RPC protocol transport, tool routing, server lifecycle, and console command entry point. Enables users to actually use pytest-mcp in AI development workflows. Without this story, workflow functions remain isolated code with no user-facing capability.
+
 ### P2 Stories (Distribution & Automation)
 
 **Story 6 (PyPI Package)**: Enables user installation through standard Python tooling. Required for user adoption but can be completed after core features proven.
@@ -915,15 +1041,19 @@ graph TB
 **Event Model Coverage**:
 - ✅ Workflow 1 (Test Discovery): Story 3
 - ✅ Workflow 2 (Test Execution): Story 4, Story 5
-- ✅ Workflow 3 (Capability Discovery): Story 1, Story 2
+- ✅ Workflow 3 (Capability Discovery): Story 1, Story 2, Story 11
 
 **Architecture Coverage**:
-- ✅ MCP Protocol Layer: Story 1, Story 2
-- ✅ Parameter Validation Layer: Story 5
+- ✅ MCP Protocol Layer: Story 1, Story 2, Story 11
+- ✅ Parameter Validation Layer: Story 5, Story 11
 - ✅ pytest Execution Layer: Story 3, Story 4
 - ✅ Result Serialization Layer: Story 4
 - ✅ Security Architecture: Story 5
 - ✅ Error Handling Strategy: Story 5
+- ✅ MCP Server Runtime (Transport Layer): Story 11
+- ✅ Tool Routing Architecture: Story 11
+- ✅ Server Lifecycle Management: Story 11
+- ✅ Console Script Entry Point: Story 11
 
 **All functional requirements and architectural components covered.**
 
@@ -944,9 +1074,9 @@ graph TB
 
 ---
 
-**Document Status**: UPDATED - Nix-first priority order with skeleton app bootstrap
+**Document Status**: UPDATED - Added Story 11 (MCP Server Runtime Integration)
 
 **Created By**: story-planner agent
 **Date**: October 3, 2025 (Friday)
-**Last Updated**: October 3, 2025 (Friday) - Nix-first order: Story 8 → Story 0 (+ skeleton) → Story 9 → Features
-**Next Review**: story-architect and ux-consultant review for consensus on Nix-first priorities
+**Last Updated**: October 3, 2025 (Friday) - Added Story 11 consolidating Epic 5 (MCP Server Integration) sub-stories
+**Next Review**: story-architect and ux-consultant review for consensus
