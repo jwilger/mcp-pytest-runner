@@ -2,6 +2,8 @@
 
 This module provides the MCP server initialization and main entry point.
 Domain types and workflow functions are defined in the domain module.
+
+Modified: 2025-10-06 - Unified tool handler implementation
 """
 
 import asyncio
@@ -68,29 +70,38 @@ async def main() -> None:
 
 
 @server.call_tool()  # type: ignore[misc]
-async def execute_tests(arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute pytest tests following ADR-010 pattern.
+async def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Unified MCP tool handler - routes to appropriate domain function based on tool name.
 
-    Step 1: Parse and validate MCP arguments
-    Step 2: Invoke domain workflow function (sync)
-    Step 3: Transform domain response to MCP dict
+    MCP SDK only supports ONE @server.call_tool() handler. This function routes to the
+    appropriate domain workflow based on the tool name parameter.
+
+    Step 1: Route based on tool name
+    Step 2: Validate arguments with appropriate Pydantic model
+    Step 3: Call appropriate domain workflow function
+    Step 4: Transform domain response to MCP dict
     """
-    # Step 1: Parse and validate MCP arguments
-    params = ExecuteTestsParams.model_validate(arguments)
+    if name == "execute_tests":
+        execute_params = ExecuteTestsParams.model_validate(arguments)
+        execute_response = domain.execute_tests(execute_params)
+        return execute_response.model_dump()
+    elif name == "discover_tests":
+        discover_params = DiscoverTestsParams.model_validate(arguments)
+        discover_response = domain.discover_tests(discover_params)
+        return discover_response.model_dump()
+    else:
+        raise ValueError(f"Unknown tool: {name}")
 
-    # Step 2: Invoke domain workflow function (sync)
-    response = domain.execute_tests(params)
 
-    # Step 3: Transform domain response to MCP dict
-    return response.model_dump()
+# Backward compatibility aliases for tests
+async def execute_tests(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Backward compatibility wrapper - delegates to handle_tool_call."""
+    return await handle_tool_call(name, arguments)  # type: ignore[no-any-return]
 
 
-@server.call_tool()  # type: ignore[misc]
-async def discover_tests(arguments: dict[str, Any]) -> dict[str, Any]:
-    """Discover pytest tests following ADR-010 pattern."""
-    params = DiscoverTestsParams.model_validate(arguments)
-    response = domain.discover_tests(params)
-    return response.model_dump()
+async def discover_tests(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Backward compatibility wrapper - delegates to handle_tool_call."""
+    return await handle_tool_call(name, arguments)  # type: ignore[no-any-return]
 
 
 if __name__ == "__main__":

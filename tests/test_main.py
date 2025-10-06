@@ -2,6 +2,7 @@
 
 import tomllib
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from pytest_mcp.main import main
@@ -114,8 +115,8 @@ def test_execute_tests_tool_handler_exists(
     mock_domain_execute.return_value = mock_response
 
     # Call the tool handler with MCP arguments
-    test_args = {"node_ids": None}
-    result = asyncio.run(execute_tests(test_args))
+    test_args: dict[str, Any] = {}  # Will use default=[]
+    result = asyncio.run(execute_tests(name="execute_tests", arguments=test_args))
 
     # Verify domain function called with validated params
     assert mock_domain_execute.called
@@ -165,7 +166,7 @@ def test_discover_tests_tool_handler_exists(
 
     # Call the tool handler with MCP arguments
     test_args = {"path": None, "pattern": None}
-    result = asyncio.run(discover_tests(test_args))
+    result = asyncio.run(discover_tests(name="discover_tests", arguments=test_args))
 
     # Verify domain function called with validated params
     assert mock_domain_discover.called
@@ -194,7 +195,7 @@ def test_tool_handler_raises_validation_error_for_invalid_arguments() -> None:
 
     # Should raise ValidationError
     with pytest.raises(ValidationError):
-        asyncio.run(execute_tests(invalid_args))
+        asyncio.run(execute_tests(name="execute_tests", arguments=invalid_args))
 
 
 @patch("pytest_mcp.main.stdio_server")
@@ -402,3 +403,159 @@ def test_list_tools_uses_adapter_to_convert_domain_to_mcp_types(
             f"Got {type(tool).__name__} instead. "
             "Driven port adapters (to_mcp_*) must convert domain types to MCP SDK types."
         )
+
+
+@patch("pytest_mcp.main.domain.execute_tests")
+def test_execute_tests_handler_accepts_name_and_arguments_parameters(
+    mock_domain_execute: MagicMock,
+) -> None:
+    """Verify execute_tests handler accepts both name and arguments parameters.
+
+    MCP SDK's @server.call_tool() decorator passes both name and arguments to handlers:
+    - name: str - The tool name being invoked
+    - arguments: dict[str, Any] - The tool arguments
+
+    This test verifies the handler signature matches MCP SDK requirements and doesn't
+    raise TypeError about the number of positional arguments.
+    """
+    import asyncio
+
+    from pytest_mcp.domain import ExecuteTestsResponse, ExecutionSummary
+    from pytest_mcp.main import execute_tests
+
+    # Mock domain function to return test response
+    mock_response = ExecuteTestsResponse(
+        exit_code=0,
+        summary=ExecutionSummary(total=0, passed=0, failed=0, errors=0, skipped=0, duration=0.0),
+        tests=[],
+        text_output="",
+    )
+    mock_domain_execute.return_value = mock_response
+
+    # Call handler with both name and arguments as MCP SDK does
+    test_args: dict[str, Any] = {}  # Will use default=[]
+    result = asyncio.run(execute_tests(name="execute_tests", arguments=test_args))
+
+    # CRITICAL ASSERTION: Handler should not raise TypeError about argument count
+    assert isinstance(result, dict)
+
+
+@patch("pytest_mcp.main.domain.discover_tests")
+def test_discover_tests_handler_accepts_name_and_arguments_parameters(
+    mock_domain_discover: MagicMock,
+) -> None:
+    """Verify discover_tests handler accepts both name and arguments parameters.
+
+    MCP SDK's @server.call_tool() decorator passes both name and arguments to handlers:
+    - name: str - The tool name being invoked
+    - arguments: dict[str, Any] - The tool arguments
+
+    This test verifies the handler signature matches MCP SDK requirements and doesn't
+    raise TypeError about the number of positional arguments.
+    """
+    import asyncio
+
+    from pytest_mcp.domain import (
+        DiscoveredTest,
+        DiscoverTestsResponse,
+    )
+    from pytest_mcp.main import discover_tests
+
+    # Mock domain function to return test response
+    mock_response = DiscoverTestsResponse(
+        tests=[
+            DiscoveredTest(
+                node_id="tests/test_sample.py::test_example",
+                module="tests.test_sample",
+                function="test_example",
+                file="tests/test_sample.py",
+                line=None,
+            )
+        ],
+        count=1,
+        collection_errors=[],
+    )
+    mock_domain_discover.return_value = mock_response
+
+    # Call handler with both name and arguments as MCP SDK does
+    test_args = {"path": None, "pattern": None}
+    result = asyncio.run(discover_tests(name="discover_tests", arguments=test_args))
+
+    # CRITICAL ASSERTION: Handler should not raise TypeError about argument count
+    assert isinstance(result, dict)
+
+
+@patch("pytest_mcp.main.domain.execute_tests")
+@patch("pytest_mcp.main.domain.discover_tests")
+def test_single_tool_handler_routes_to_correct_domain_function(
+    mock_domain_discover: MagicMock,
+    mock_domain_execute: MagicMock,
+) -> None:
+    """Verify there is ONE tool handler that routes to correct domain function based on name.
+
+    CRITICAL BUG: MCP SDK only supports ONE @server.call_tool() handler.
+    Multiple @server.call_tool() decorators overwrite each other - only the LAST one is registered.
+
+    Current code has TWO decorators (execute_tests, discover_tests), so only discover_tests
+    is actually being called by the MCP SDK, causing execute_tests tool calls to fail.
+
+    SOLUTION: Single unified handler that routes based on the 'name' parameter:
+    - When name='execute_tests': validate with ExecuteTestsParams, call domain.execute_tests()
+    - When name='discover_tests': validate with DiscoverTestsParams, call domain.discover_tests()
+
+    This test verifies the single handler exists and routes correctly to both domain functions.
+    """
+    import asyncio
+
+    from pytest_mcp.domain import (
+        DiscoveredTest,
+        DiscoverTestsResponse,
+        ExecuteTestsResponse,
+        ExecutionSummary,
+    )
+    from pytest_mcp.main import handle_tool_call
+
+    # Mock execute_tests domain response
+    mock_execute_response = ExecuteTestsResponse(
+        exit_code=0,
+        summary=ExecutionSummary(total=0, passed=0, failed=0, errors=0, skipped=0, duration=0.5),
+        tests=[],
+        text_output="1 passed",
+    )
+    mock_domain_execute.return_value = mock_execute_response
+
+    # Mock discover_tests domain response
+    mock_discover_response = DiscoverTestsResponse(
+        tests=[
+            DiscoveredTest(
+                node_id="tests/test_sample.py::test_example",
+                module="tests.test_sample",
+                function="test_example",
+                file="tests/test_sample.py",
+                line=None,
+            )
+        ],
+        count=1,
+        collection_errors=[],
+    )
+    mock_domain_discover.return_value = mock_discover_response
+
+    # Test 1: Call handler with execute_tests tool name
+    execute_args = {"node_ids": ["tests/test_sample.py::test_example"]}
+    execute_result = asyncio.run(handle_tool_call(name="execute_tests", arguments=execute_args))
+
+    # Verify execute_tests was routed correctly
+    assert mock_domain_execute.called, "Handler must route execute_tests to domain.execute_tests()"
+    assert isinstance(execute_result, dict), "Handler must return dict from domain response"
+    assert execute_result["exit_code"] == 0
+
+    # Test 2: Call handler with discover_tests tool name
+    discover_args = {"path": None, "pattern": None}
+    discover_result = asyncio.run(handle_tool_call(name="discover_tests", arguments=discover_args))
+
+    # Verify discover_tests was routed correctly
+    assert mock_domain_discover.called, (
+        "Handler must route discover_tests to domain.discover_tests()"
+    )
+    assert isinstance(discover_result, dict), "Handler must return dict from domain response"
+    assert discover_result["count"] == 1

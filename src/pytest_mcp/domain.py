@@ -130,9 +130,12 @@ class ExecuteTestsParams(BaseModel):
     Follows STYLE_GUIDE.md tool specification (lines 364-417).
     """
 
-    node_ids: list[str] | None = Field(
-        default=None,
-        description="Specific test node IDs to execute (e.g., 'tests/test_user.py::test_login')",
+    node_ids: list[str] = Field(
+        default=[],
+        description=(
+            "Array of strings. Specific test node IDs to execute. "
+            "Example: ['tests/test_user.py::test_login', 'tests/test_auth.py']"
+        ),
     )
     markers: str | None = Field(
         default=None,
@@ -144,13 +147,19 @@ class ExecuteTestsParams(BaseModel):
     )
     verbosity: int | None = Field(
         default=None,
-        description="Output verbosity level: -2 (quietest) to 2 (most verbose)",
+        description=(
+            "Integer from -2 to 2. Output verbosity level: -2 (quietest) to 2 (most verbose). "
+            "Example: 1 for verbose output"
+        ),
         ge=-2,
         le=2,
     )
     failfast: bool | None = Field(
         default=None,
-        description="Stop execution on first failure",
+        description=(
+            "Boolean. Stop execution on first failure. "
+            "Example: true to stop immediately, false to continue"
+        ),
     )
     maxfail: int | None = Field(
         default=None,
@@ -699,7 +708,7 @@ def execute_tests(
             cmd,
             capture_output=True,
             text=True,
-            timeout=30,  # Prevent hangs
+            timeout=params.timeout if params.timeout else 30,  # Use param or default to 30
         )
     except subprocess.TimeoutExpired as e:
         # Return ExecutionError for timeout
@@ -734,7 +743,7 @@ def execute_tests(
     failed_count = 0
     duration = 0.0
 
-    summary_match = re.search(r"(\d+) passed in ([\d.]+)s", result.stdout)
+    summary_match = re.search(r"(\d+) passed.*? in ([\d.]+)s", result.stdout)
     if summary_match:
         passed_count = int(summary_match.group(1))
         duration = float(summary_match.group(2))
