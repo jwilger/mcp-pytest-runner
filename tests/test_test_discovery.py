@@ -4,7 +4,7 @@ Outside-In TDD: Start with highest-level acceptance test for test discovery.
 Test the workflow function directly before drilling down to components.
 """
 
-from pytest_mcp.domain import DiscoverTestsParams, DiscoverTestsResponse, discover_tests
+from mcp_pytest_runner.domain import DiscoverTestsParams, DiscoverTestsResponse, discover_tests
 
 
 def test_discover_tests_returns_response_object() -> None:

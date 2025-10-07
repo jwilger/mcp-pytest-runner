@@ -4,7 +4,7 @@ Outside-In TDD: Start with highest-level acceptance test for test execution.
 Test the workflow function directly before drilling down to components.
 """
 
-from pytest_mcp.domain import ExecuteTestsParams, ExecuteTestsResponse, execute_tests
+from mcp_pytest_runner.domain import ExecuteTestsParams, ExecuteTestsResponse, execute_tests
 
 
 def test_execute_tests_with_no_parameters_returns_execution_response() -> None:
@@ -232,7 +232,7 @@ def test_execute_tests_respects_timeout_parameter() -> None:
     result = execute_tests(params)
 
     # Assert: Should return ExecutionError with timeout_exceeded=True (MAIN ASSERTION)
-    from pytest_mcp.domain import ExecutionError
+    from mcp_pytest_runner.domain import ExecutionError
 
     assert isinstance(result, ExecutionError) and result.timeout_exceeded is True, (
         f"Expected ExecutionError with timeout_exceeded=True when test exceeds timeout, "

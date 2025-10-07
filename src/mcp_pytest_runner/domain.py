@@ -708,7 +708,9 @@ def execute_tests(
             cmd,
             capture_output=True,
             text=True,
-            timeout=params.timeout if params.timeout else 30,  # Use param or default to 30
+            timeout=params.timeout
+            if params.timeout is not None
+            else 30,  # Use param or default to 30
         )
     except subprocess.TimeoutExpired as e:
         # Return ExecutionError for timeout
@@ -743,7 +745,7 @@ def execute_tests(
     failed_count = 0
     duration = 0.0
 
-    summary_match = re.search(r"(\d+) passed.*? in ([\d.]+)s", result.stdout)
+    summary_match = re.search(r"(\d+) passed(?:, \d+ warnings?)? in ([\d.]+)s", result.stdout)
     if summary_match:
         passed_count = int(summary_match.group(1))
         duration = float(summary_match.group(2))
