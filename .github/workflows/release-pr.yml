@@ -54,6 +54,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+
           # Get the new version from semantic-release output
           NEW_VERSION=$(uv run semantic-release version --no-commit --no-tag --no-push --print 2>/dev/null | head -1)
 
@@ -66,18 +68,14 @@ jobs:
 
           BRANCH_NAME="release-v${NEW_VERSION}"
 
-          # Check if branch already exists
-          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
-            echo "Release branch $BRANCH_NAME already exists"
-            git fetch origin "$BRANCH_NAME"
-            git checkout "$BRANCH_NAME"
-            git reset --hard origin/main
-          else
-            git checkout -b "$BRANCH_NAME"
-          fi
-
-          # Run semantic-release to update versions and changelog
+          # Run semantic-release on main to create the version bump commits
           uv run semantic-release version --no-push --no-tag
+
+          # Create release branch from the current state (with version bump commits)
+          git branch -f "$BRANCH_NAME"
+
+          # Reset main back to origin/main (undo local commits on main)
+          git reset --hard origin/main
 
           # Push the release branch
           git push -f origin "$BRANCH_NAME"
