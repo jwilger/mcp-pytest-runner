@@ -69,7 +69,7 @@ jobs:
           BRANCH_NAME="release-v${NEW_VERSION}"
 
           # Run semantic-release on main to create the version bump commits
-          uv run semantic-release version --no-push --no-tag
+          uv run semantic-release version --no-push --no-tag --skip-build
 
           # Create release branch from the current state (with version bump commits)
           git branch -f "$BRANCH_NAME"
