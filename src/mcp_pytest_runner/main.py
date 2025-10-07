@@ -19,7 +19,7 @@ from mcp_pytest_runner import domain  # noqa: F401 - imported for type availabil
 from mcp_pytest_runner.domain import DiscoverTestsParams, ExecuteTestsParams
 
 # Module scope: Server instance per ADR-011
-server = Server("pytest-mcp")
+server = Server("mcp-pytest-runner")
 
 
 def to_mcp_tool(domain_tool: domain.Tool) -> McpTool:
@@ -59,7 +59,7 @@ async def main() -> None:
             read_stream,
             write_stream,
             InitializationOptions(
-                server_name="pytest-mcp",
+                server_name="mcp-pytest-runner",
                 server_version="0.2.1",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
