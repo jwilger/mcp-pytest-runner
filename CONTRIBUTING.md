@@ -80,6 +80,29 @@ All code must pass:
 
 Pre-commit hooks will run these checks automatically.
 
+## Release Process
+
+Releases are fully automated using a PR-based workflow similar to release-plz:
+
+1. **Push to main** - When a PR with `feat:` or `fix:` is merged, the Release PR workflow automatically:
+   - Analyzes commits since last release
+   - Determines version bump
+   - Creates/updates a release PR with:
+     - Version bumps in pyproject.toml and __init__.py
+     - Updated CHANGELOG.md
+
+2. **Review Release PR** - The automatically created release PR should be reviewed for:
+   - Correct version number
+   - Accurate CHANGELOG entries
+
+3. **Merge Release PR** - When the release PR is merged:
+   - Git tag is created
+   - Package is built
+   - Published to PyPI
+   - GitHub release is created
+
+This PR-based approach respects branch protection rules and provides a review step before publishing.
+
 ## Questions?
 
 Open an issue or start a discussion on GitHub!
