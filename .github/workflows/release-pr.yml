@@ -68,16 +68,20 @@ jobs:
 
           BRANCH_NAME="release-v${NEW_VERSION}"
 
-          # Run semantic-release on main to create the version bump commits
-          uv run semantic-release version --no-push --no-tag --skip-build
+          # Run semantic-release on main to create the version bump commits and tag
+          # We need the tag for commit_sha output to be set, but we don't push it
+          uv run semantic-release version --no-push --skip-build
 
           # Create release branch from the current state (with version bump commits)
           git branch -f "$BRANCH_NAME"
 
+          # Delete the local tag (we'll recreate it after PR merge in release-publish workflow)
+          git tag -d "v${NEW_VERSION}" || true
+
           # Reset main back to origin/main (undo local commits on main)
           git reset --hard origin/main
 
-          # Push the release branch
+          # Push the release branch (without the tag)
           git push -f origin "$BRANCH_NAME"
 
           # Create or update PR
