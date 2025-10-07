@@ -41,10 +41,11 @@ jobs:
         id: check
         run: |
           # Run semantic-release in dry-run mode to check if release is needed
-          if uv run semantic-release version --no-commit --no-tag --no-push --print 2>/dev/null | grep -q "Bumping version"; then
-            echo "release_needed=true" >> $GITHUB_OUTPUT
-          else
+          OUTPUT=$(uv run semantic-release version --no-commit --no-tag --no-push --print 2>&1)
+          if echo "$OUTPUT" | grep -iq "no release will be made"; then
             echo "release_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "release_needed=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Create release branch and PR
