@@ -94,12 +94,17 @@ dev = [
 version_toml = ["pyproject.toml:project.version"]
 version_variables = ["src/mcp_pytest_runner/__init__.py:__version__"]
 branch = "main"
-# Build and upload handled by release-publish.yml workflow after PR merge
+# PyPI upload handled by release-publish.yml workflow after PR merge
 upload_to_pypi = false
-upload_to_release = false
+# Enable GitHub release creation (completes workflow even without tag)
+upload_to_release = true
 commit_parser = "angular"
 major_on_zero = false
 tag_format = "v{version}"
+
+[tool.semantic_release.remote]
+type = "github"
+token = { env = "GH_TOKEN" }
 
 [tool.semantic_release.branches.main]
 match = "main"
@@ -110,20 +115,6 @@ exclude_commit_patterns = []
 
 [tool.semantic_release.changelog.default_templates]
 changelog_file = "CHANGELOG.md"
-
-[tool.semantic_release.changelog.environment]
-block_start_string = "{%"
-block_end_string = "%}"
-variable_start_string = "{{"
-variable_end_string = "}}"
-comment_start_string = "{#"
-comment_end_string = "#}"
-trim_blocks = false
-lstrip_blocks = false
-newline_sequence = "\n"
-keep_trailing_newline = false
-extensions = []
-autoescape = true
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
