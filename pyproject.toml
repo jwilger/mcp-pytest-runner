@@ -94,17 +94,12 @@ dev = [
 version_toml = ["pyproject.toml:project.version"]
 version_variables = ["src/mcp_pytest_runner/__init__.py:__version__"]
 branch = "main"
-# PyPI upload handled by release-publish.yml workflow after PR merge
+# Build and upload handled by release-publish.yml workflow after PR merge
 upload_to_pypi = false
-# Enable GitHub release creation (completes workflow even without tag)
-upload_to_release = true
+upload_to_release = false
 commit_parser = "angular"
 major_on_zero = false
 tag_format = "v{version}"
-
-[tool.semantic_release.remote]
-type = "github"
-token = { env = "GH_TOKEN" }
 
 [tool.semantic_release.branches.main]
 match = "main"
