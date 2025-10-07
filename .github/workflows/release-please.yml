@@ -18,6 +18,10 @@ jobs:
         id: release
         with:
           release-type: python
+          # Use PAT instead of GITHUB_TOKEN to trigger CI workflows on release PRs
+          # GitHub's GITHUB_TOKEN doesn't trigger workflows to prevent recursion
+          # See: https://github.com/googleapis/release-please/issues/922
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
       # Publish to PyPI when a release is created
       - uses: actions/checkout@v4
