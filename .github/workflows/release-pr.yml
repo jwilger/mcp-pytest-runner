@@ -40,6 +40,7 @@ jobs:
       - name: Check if release needed
         id: check
         run: |
+          set -e
           # Run semantic-release in dry-run mode to check if release is needed
           OUTPUT=$(uv run semantic-release version --no-commit --no-tag --no-push --print 2>&1)
           if echo "$OUTPUT" | grep -iq "no release will be made"; then
