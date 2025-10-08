@@ -8,7 +8,7 @@ mcp-pytest-runner is a Model Context Protocol (MCP) server that enables AI codin
 
 ## Status
 
-This project is in active development. MCP server implementation complete with stdio transport, test discovery, and test execution capabilities.
+This project is in active development. The MCP server implementation is complete with stdio transport, test discovery, and test execution capabilities.
 
 ## Installation
 
